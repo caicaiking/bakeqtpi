@@ -334,7 +334,7 @@ function prepcctools {
 function configureandmakeqtbase {
     echo "Configuring QT Base"
 
-    CONFIGURE_OPTIONS="-opengl es2 -device linux-rasp-pi-g++ -device-option CROSS_COMPILE=$CROSSCOMPILER/bin/arm-linux-gnueabihf- -sysroot $ROOTFS -opensource -confirm-license -optimized-qmake -release -make libs -prefix $QT5PIPREFIX -no-pch"
+	CONFIGURE_OPTIONS="-opengl es2 -device linux-rasp-pi-g++ -device-option CROSS_COMPILE=$CROSSCOMPILER/bin/arm-linux-gnueabihf- -sysroot $ROOTFS -opensource -confirm-license -optimized-qmake -release -prefix $QT5PIPREFIX -no-pch"
 
     if [ ! -f /etc/redhat-release ]
     then
