@@ -320,7 +320,7 @@ function dlqt {
 	done || error 7
 	
 	# [miso-ni-qtpi] v5.0.2を使用する為に、submoduleをv5.0.2のtagにてbranchを切っておく。
-	git submodule foreach 'git checkout -b branch-v5.0.2 v5.0.2'
+	git submodule foreach 'git checkout -b branch-v5.0.2 v5.0.2 || :'
 
 	echo "Code cloned"
 	#cd $OPT_DIRECTORY/qt5/qtjsbackend
