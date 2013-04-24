@@ -4,7 +4,9 @@
 
 
 SCRIPT_DIR=$PWD
-OPT_DIRECTORY=~/opt
+#  [miso-ni-qtpi] ~/ ではなく、bakeqtpiのDirectory中の./opt Directoryに変更。
+#OPT_DIRECTORY=~/opt
+OPT_DIRECTORY=$PWD/opt
 QTBASE=$OPT_DIRECTORY/qt5
 
 #Some sensible defaults
@@ -26,7 +28,9 @@ QT5PIPREFIX=/usr/local/qt5pi
 QT5ROOTFSPREFIX=$ROOTFS/usr/local/qt5pi
 
 #Raspbian image and download stuff
-RASPBIAN=2012-10-28-wheezy-raspbian
+# [miso-ni-qtpi] やっぱ最新のraspban使っちゃうでしょ。
+#RASPBIAN=2012-10-28-wheezy-raspbian
+RASPBIAN=2013-02-09-wheezy-raspbian
 
 RASPBIAN_HTTP=http://ftp.snt.utwente.nl/pub/software/rpi/images/raspbian/$RASPBIAN/$RASPBIAN.zip
 RASPBIAN_TORRENT=http://downloads.raspberrypi.org/images/raspbian/$RASPBIAN/$RASPBIAN.zip.torrent
@@ -281,7 +285,9 @@ function dlcc {
 	ln -s $CROSSCOMPILER/bin/arm-linux-gnueabihf-readelf readelf
 	export PATH=$OPT_DIRECTORY:$PATH
 	else
-	    wget $WGET_OPT http://blueocean.qmh-project.org/gcc-4.7-linaro-rpi-gnueabihf.tbz || error 4
+		# [miso-ni-qtpi] 404 Not Foundだったので、とりあえず自分のdropboxのlinkから取得。
+	    #wget $WGET_OPT http://blueocean.qmh-project.org/gcc-4.7-linaro-rpi-gnueabihf.tbz || error 4
+	    wget $WGET_OPT https://www.dropbox.com/s/sl919ly0q79m1e6/gcc-4.7-linaro-rpi-gnueabihf.tbz
 	    tar -xf gcc-4.7-linaro-rpi-gnueabihf.tbz || error 5
 	    CROSSCOMPILERPATH=$CROSSCOMPILER/bin/arm-linux-gnueabihf-gcc
 	fi
@@ -312,6 +318,10 @@ function dlqt {
 	do
 	    ./init-repository $INITREPOARGS && touch $OPT_DIRECTORY/qt5/.initialised
 	done || error 7
+	
+	# [miso-ni-qtpi] v5.0.2を使用する為に、submoduleをv5.0.2のtagにてbranchを切っておく。
+	git submodule foreach 'git checkout -b branch-v5.0.2 v5.0.2'
+
 	echo "Code cloned"
 	#cd $OPT_DIRECTORY/qt5/qtjsbackend
 	#git fetch https://codereview.qt-project.org/p/qt/qtjsbackend refs/changes/56/27256/4 && git cherry-pick FETCH_HEAD
@@ -327,7 +337,9 @@ function dlqt {
 function prepcctools {
     cd $CROSSCOMPILETOOLS
     echo "Fixing Qualified Library Paths, whatever that means..."
-    ./fixQualifiedLibraryPaths $ROOTFS $CROSSCOMPILERPATH || error 8
+    # [miso-ni-qtpi] sudo付けておかないと、いぱ～いpassword入れないといけなくなるので。
+#    ./fixQualifiedLibraryPaths $ROOTFS $CROSSCOMPILERPATH || error 8
+    sudo ./fixQualifiedLibraryPaths $ROOTFS $CROSSCOMPILERPATH || error 8
     cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase
 }
 
@@ -353,6 +365,16 @@ function configureandmakeqtbase {
     fi
     echo "Making QT Base"
     make -j $CORES || error 10
+    # qtbaseのexampleもbuildしておく。
+    make sub-examples-qmake_all -j $CORES || error 10
+}
+
+# [miso-ni-qtpi] piユーザーの.bachrcにqt5のpathを通しておく
+function setlibrarypath {
+	echo "Setting LD_LIBRARY_PATH to /home/pi/.bashrc"
+	sudo cat >> $ROOTFS/home/pi/.bashrc <<EOF
+export LD_LIBRARY_PATH=/usr/local/qt5pi/lib/
+EOF
 }
 
 function installqtbase {
@@ -360,6 +382,8 @@ function installqtbase {
     cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase
     if [ "$(id -u)" != "0" ]; then
 	sudo make install
+	# [miso-ni-qtpi] exampleのmake & install
+	sudo make sub-examples-qmake_all_subtargets
 	sudo cp -r $QT5PIPREFIX/mkspecs $QT5ROOTFSPREFIX/
     else
 	make install
@@ -375,8 +399,18 @@ function makemodules {
 	if [ ! -e "$OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i/.COMPILED" ]; then
 	    if [ "$(id -u)" != "0" ]; then
 		    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i && echo "Building $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make -j $CORES && sudo make install && touch .COMPILED
+		    # [miso-ni-qtpi] declarativeに関してはqmlsceneを導入する。
+			# exampleを導入する。
+			if [ "$i" = "qtdeclarative" ]; then
+			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make qmake_all -j $CORES && sudo make install && sudo make sub-tools-install_subtargets && sudo make sub-examples-install_subtargets
+			fi
 	    else
 		    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i && echo "Building $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make -j $CORES && make install && touch .COMPILED
+		    # [miso-ni-qtpi] qtdeclarativeに関してはqmlsceneを導入する。
+			# exampleを導入する。
+			if [ "$i" = "qtdeclarative" ]; then
+			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make qmake_all -j $CORES && make install && make sub-tools-install_subtargets && make sub-examples-install_subtargets
+			fi
 	    fi
 	    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/
 	fi
@@ -415,8 +449,10 @@ function copyToImage {
 #Start of script
 
 if [ ! "$QT5_PACKAGE" == 1 ]; then
-    echo "Would you like to build from GIT(G) or Package(P)?"
-    read -e option
+	 # [miso-ni-qtpi] Prackageを取得するのではなく、GITから取得する。
+#    echo "Would you like to build from GIT(G) or Package(P)?"
+#    read -e option
+     option="G"
 
     while [[ ! $option =~ [GgPp] ]]; do
 	    echo "Please type G for Git or P for package"
@@ -447,6 +483,8 @@ dlcc
 dlqt
 prepcctools
 configureandmakeqtbase
+# [miso-ni-qtpi] root file systemの piユーザーの.bashにLD_LIBRAR_PATH追加
+setlibrarypath
 installqtbase
 makemodules
 copyToImage
