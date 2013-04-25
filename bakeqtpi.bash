@@ -320,6 +320,7 @@ function dlqt {
 	done || error 7
 	
 	# [miso-ni-qtpi] v5.0.2を使用する為に、submoduleをv5.0.2のtagにてbranchを切っておく。
+	# git submodule update --init ./qt3d/
 	git submodule foreach 'git checkout -b branch-v5.0.2 v5.0.2 || :'
 
 	echo "Code cloned"
@@ -361,11 +362,14 @@ function configureandmakeqtbase {
 	make confclean
     fi
     if [ ! -e $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase/.CONFIGURED ]; then
+	# [miso-ni-qtpi] qtbaseに対して、patchを追加。
+	patch -p1 -i ../../../qtbase_mkspecs_device_linux-rasp-pi_qmakeconf.patch
+    
 	./configure $CONFIGURE_OPTIONS && touch $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase/.CONFIGURED || error 9
     fi
     echo "Making QT Base"
     make -j $CORES || error 10
-    # qtbaseのexampleもbuildしておく。
+    # [miso-ni-qtpi] qtbaseのexampleもbuildしておく。
     make sub-examples-qmake_all -j $CORES || error 10
 }
 
@@ -398,11 +402,12 @@ function makemodules {
     do
 	if [ ! -e "$OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i/.COMPILED" ]; then
 	    if [ "$(id -u)" != "0" ]; then
-		    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i && echo "Building $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make -j $CORES && sudo make install && touch .COMPILED
+			# [miso-ni-qtpi] 所々でmake途中で、rfsの方へDirectoryを作成しに行く事があったので、make時もsudoを付加させるようにした。
+			cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i && echo "Building $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && sudo make -j $CORES && sudo make install && touch .COMPILED
 		    # [miso-ni-qtpi] declarativeに関してはqmlsceneを導入する。
 			# exampleを導入する。
 			if [ "$i" = "qtdeclarative" ]; then
-			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make qmake_all -j $CORES && sudo make install && sudo make sub-tools-install_subtargets && sudo make sub-examples-install_subtargets
+			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && sudo make qmake_all -j $CORES && sudo make install && sudo make sub-tools-install_subtargets && sudo make sub-examples-install_subtargets
 			fi
 	    else
 		    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i && echo "Building $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make -j $CORES && make install && touch .COMPILED
@@ -469,7 +474,9 @@ if [ "$QT5_PACKAGE" == 1 ]; then
     QT5_SOURCE_DIRECTORY="qt-everywhere-opensource-src-$QT5_PACKAGE_VER"
     echo "Building from Package"
 else
-    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qt3d qtgraphicaleffects qtlocation qtquick1 qtsystems qtmultimedia"
+    # [miso-ni-qtpi] qt3d / qtlocation / qtsystems は、v5.0.2に含まれないので、build対象から外します。[どのみちBuild Failedになるし...]
+    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qtgraphicaleffects qtquick1 qtmultimedia"
+#    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qt3d qtgraphicaleffects qtlocation qtquick1 qtsystems qtmultimedia"
     QT5_SOURCE_DIRECTORY="qt5"
     echo "Building from Git"
 fi
