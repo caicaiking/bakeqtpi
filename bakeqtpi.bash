@@ -373,11 +373,12 @@ function configureandmakeqtbase {
     make sub-examples-qmake_all -j $CORES || error 10
 }
 
-# [miso-ni-qtpi] piユーザーの.bachrcにqt5のpathを通しておく
+# [miso-ni-qtpi] piユーザーの.bachrcにqt5のlib & bin へのpathを通しておく
 function setlibrarypath {
 	echo "Setting LD_LIBRARY_PATH to /home/pi/.bashrc"
 	sudo cat >> $ROOTFS/home/pi/.bashrc <<EOF
 export LD_LIBRARY_PATH=/usr/local/qt5pi/lib/
+export PATH=$PATH:/usr/local/qt5pi/bin/
 EOF
 }
 
@@ -388,9 +389,13 @@ function installqtbase {
 	sudo make install
 	# [miso-ni-qtpi] exampleのmake & install
 	sudo make sub-examples-qmake_all_subtargets
+	sudo make sub-examples-install_subtargets
 	sudo cp -r $QT5PIPREFIX/mkspecs $QT5ROOTFSPREFIX/
     else
 	make install
+	# [miso-ni-qtpi] exampleのmake & install
+	make sub-examples-qmake_all_subtargets
+	make sub-examples-install_subtargets
 	cp -r $QT5PIPREFIX/mkspecs $QT5ROOTFSPREFIX/
     fi
     echo "QT Base Installed"
@@ -407,14 +412,14 @@ function makemodules {
 		    # [miso-ni-qtpi] declarativeに関してはqmlsceneを導入する。
 			# exampleを導入する。
 			if [ "$i" = "qtdeclarative" ]; then
-			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && sudo make qmake_all -j $CORES && sudo make install && sudo make sub-tools-install_subtargets && sudo make sub-examples-install_subtargets
+			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && sudo make all -j $CORES && sudo make install && sudo make sub-tools-install_subtargets && sudo make sub-examples-install_subtargets
 			fi
 	    else
 		    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/$i && echo "Building $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make -j $CORES && make install && touch .COMPILED
 		    # [miso-ni-qtpi] qtdeclarativeに関してはqmlsceneを導入する。
 			# exampleを導入する。
 			if [ "$i" = "qtdeclarative" ]; then
-			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make qmake_all -j $CORES && make install && make sub-tools-install_subtargets && make sub-examples-install_subtargets
+			    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORTY/$i && echo "ReBuilding $i" && sleep 3 && $QT5PIPREFIX/bin/qmake . && make all -j $CORES && make install && make sub-tools-install_subtargets && make sub-examples-install_subtargets
 			fi
 	    fi
 	    cd $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/
@@ -475,7 +480,7 @@ if [ "$QT5_PACKAGE" == 1 ]; then
     echo "Building from Package"
 else
     # [miso-ni-qtpi] qt3d / qtlocation / qtsystems は、v5.0.2に含まれないので、build対象から外します。[どのみちBuild Failedになるし...]
-    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qtgraphicaleffects qtquick1 qtmultimedia"
+    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qtgraphicaleffects qttools qtquick1 qtmultimedia"
 #    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qt3d qtgraphicaleffects qtlocation qtquick1 qtsystems qtmultimedia"
     QT5_SOURCE_DIRECTORY="qt5"
     echo "Building from Git"
