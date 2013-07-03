@@ -29,8 +29,7 @@ QT5ROOTFSPREFIX=$ROOTFS/usr/local/qt5pi
 
 #Raspbian image and download stuff
 # [miso-ni-qtpi] やっぱ最新のraspban使っちゃうでしょ。
-#RASPBIAN=2012-10-28-wheezy-raspbian
-RASPBIAN=2013-02-09-wheezy-raspbian
+RASPBIAN=2013-05-25-wheezy-raspbian
 
 RASPBIAN_HTTP=http://ftp.snt.utwente.nl/pub/software/rpi/images/raspbian/$RASPBIAN/$RASPBIAN.zip
 RASPBIAN_TORRENT=http://downloads.raspberrypi.org/images/raspbian/$RASPBIAN/$RASPBIAN.zip.torrent
@@ -319,9 +318,9 @@ function dlqt {
 	    ./init-repository $INITREPOARGS && touch $OPT_DIRECTORY/qt5/.initialised
 	done || error 7
 	
-	# [miso-ni-qtpi] v5.0.2を使用する為に、submoduleをv5.0.2のtagにてbranchを切っておく。
+	# [miso-ni-qtpi] v5.1.0-rc2を使用する為に、submoduleをv5.1.0-rc2のtagにてbranchを切っておく。
 	# git submodule update --init ./qt3d/
-	git submodule foreach 'git checkout -b branch-v5.0.2 v5.0.2 || :'
+	git submodule foreach 'git checkout -b branch-v5.1.0-rc2 v5.1.0-rc2 || :'
 
 	echo "Code cloned"
 	#cd $OPT_DIRECTORY/qt5/qtjsbackend
@@ -362,8 +361,9 @@ function configureandmakeqtbase {
 	make confclean
     fi
     if [ ! -e $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase/.CONFIGURED ]; then
-	# [miso-ni-qtpi] qtbaseに対して、patchを追加。
-	patch -p1 -i ../../../qtbase_mkspecs_device_linux-rasp-pi_qmakeconf.patch
+# v5.0.2では、patchが必要だが、この修正はmargeされている為、v5.1.0-rc2では不要。
+		#	# [miso-ni-qtpi] qtbaseに対して、patchを追加。
+#	patch -p1 -i ../../../qtbase_mkspecs_device_linux-rasp-pi_qmakeconf.patch
     
 	./configure $CONFIGURE_OPTIONS && touch $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase/.CONFIGURED || error 9
     fi
@@ -479,8 +479,8 @@ if [ "$QT5_PACKAGE" == 1 ]; then
     QT5_SOURCE_DIRECTORY="qt-everywhere-opensource-src-$QT5_PACKAGE_VER"
     echo "Building from Package"
 else
-    # [miso-ni-qtpi] qt3d / qtlocation / qtsystems は、v5.0.2に含まれないので、build対象から外します。[どのみちBuild Failedになるし...]
-    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qtgraphicaleffects qttools qtquick1 qtmultimedia"
+    # [miso-ni-qtpi] qt3d / qtlocation / qtsystems は、v5.1.0-rc2に含まれないので、build対象から外します。[どのみちBuild Failedになるし...]
+    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtserialport qtdeclarative qtsensors qtgraphicaleffects qtquickcontrols qttools qttranslations qtquick1 qtmultimedia"
 #    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qt3d qtgraphicaleffects qtlocation qtquick1 qtsystems qtmultimedia"
     QT5_SOURCE_DIRECTORY="qt5"
     echo "Building from Git"
