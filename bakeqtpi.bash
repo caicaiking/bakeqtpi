@@ -318,9 +318,9 @@ function dlqt {
 	    ./init-repository $INITREPOARGS && touch $OPT_DIRECTORY/qt5/.initialised
 	done || error 7
 	
-	# [miso-ni-qtpi] v5.1.0-rc2を使用する為に、submoduleをv5.1.0-rc2のtagにてbranchを切っておく。
+	# [miso-ni-qtpi] v5.1.0を使用する為に、submoduleをv5.1.0のtagにてbranchを切っておく。
 	# git submodule update --init ./qt3d/
-	git submodule foreach 'git checkout -b branch-v5.1.0-rc2 v5.1.0-rc2 || :'
+	git submodule foreach 'git checkout -b branch-v5.1.0 v5.1.0 || :'
 
 	echo "Code cloned"
 	#cd $OPT_DIRECTORY/qt5/qtjsbackend
@@ -361,9 +361,6 @@ function configureandmakeqtbase {
 	make confclean
     fi
     if [ ! -e $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase/.CONFIGURED ]; then
-# v5.0.2では、patchが必要だが、この修正はmargeされている為、v5.1.0-rc2では不要。
-		#	# [miso-ni-qtpi] qtbaseに対して、patchを追加。
-#	patch -p1 -i ../../../qtbase_mkspecs_device_linux-rasp-pi_qmakeconf.patch
     
 	./configure $CONFIGURE_OPTIONS && touch $OPT_DIRECTORY/$QT5_SOURCE_DIRECTORY/qtbase/.CONFIGURED || error 9
     fi
@@ -479,7 +476,7 @@ if [ "$QT5_PACKAGE" == 1 ]; then
     QT5_SOURCE_DIRECTORY="qt-everywhere-opensource-src-$QT5_PACKAGE_VER"
     echo "Building from Package"
 else
-    # [miso-ni-qtpi] qt3d / qtlocation / qtsystems は、v5.1.0-rc2に含まれないので、build対象から外します。[どのみちBuild Failedになるし...]
+    # [miso-ni-qtpi] qt3d / qtlocation / qtsystems は、v5.1.0に含まれないので、build対象から外します。[どのみちBuild Failedになるし...]
     QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtserialport qtdeclarative qtsensors qtgraphicaleffects qtquickcontrols qttools qttranslations qtquick1 qtmultimedia"
 #    QT_COMPILE_LIST="qtimageformats qtsvg qtjsbackend qtscript qtxmlpatterns qtdeclarative qtsensors qt3d qtgraphicaleffects qtlocation qtquick1 qtsystems qtmultimedia"
     QT5_SOURCE_DIRECTORY="qt5"
